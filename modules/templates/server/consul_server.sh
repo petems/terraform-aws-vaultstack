@@ -1,16 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
-echo "==> Consul (server)"
-if [ ${enterprise} == 0 ]
-then
 echo "--> Fetching OSS binaries"
 install_from_url "consul" "${consul_url}"
-else
-echo "--> Fetching enterprise binaries"
-install_from_url "consul" "${consul_ent_url}"
-fi
-
 
 echo "--> Writing configuration"
 sudo mkdir -p /mnt/consul
@@ -56,11 +48,7 @@ sudo tee /etc/consul.d/config.json > /dev/null <<EOF
     "redundancy_zone_tag": "",
     "disable_upgrade_migration": false,
     "upgrade_version_tag": ""
-},
- "connect":{
-  "enabled": true,
-      "proxy": {  "allow_managed_root": true  }
-      }
+  }
 }
 EOF
 
@@ -112,28 +100,6 @@ echo "--> Waiting for Consul leader"
 while [ -z "$(curl -s http://127.0.0.1:8500/v1/status/leader)" ]; do
   sleep 3
 done
-
-if [ ${enterprise} == 1 ]
-then
-echo "--> apply Consul License"
-sudo consul license put "${consullicense}" > /tmp/consullicense.out
-
-
-fi
-
-
-echo "--> Registering prepared query"
-curl -so /dev/null -X POST http://127.0.0.1:8500/v1/query \
-  -d @- <<BODY
-{
-  "Name": "nearest-web",
-  "Service": {
-    "Service": "web",
-    "Near": "_agent",
-    "OnlyPassing": true
-  }
-}
-BODY
 
 echo "--> Denying anonymous access to vault/ and tmp/"
 curl -so /dev/null -X PUT http://127.0.0.1:8500/v1/acl/update \

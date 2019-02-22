@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-echo "==> Consul (client)"
-
-echo "--> Fetching"
+echo "--> Fetching OSS binaries"
 install_from_url "consul" "${consul_url}"
 
 echo "--> Writing configuration"
@@ -11,6 +9,10 @@ sudo mkdir -p /mnt/consul
 sudo mkdir -p /etc/consul.d
 sudo tee /etc/consul.d/config.json > /dev/null <<EOF
 {
+  "acl_datacenter": "dc1",
+  "acl_master_token": "${consul_master_token}",
+  "acl_token": "${consul_master_token}",
+  "acl_default_policy": "allow",
   "advertise_addr": "$(private_ip)",
   "advertise_addr_wan": "$(public_ip)",
   "bind_addr": "$(private_ip)",
@@ -21,11 +23,7 @@ sudo tee /etc/consul.d/config.json > /dev/null <<EOF
   "node_name": "${node_name}",
   "raft_protocol": 3,
   "retry_join": ["provider=aws tag_key=${consul_join_tag_key} tag_value=${consul_join_tag_value}"],
-
-  "addresses": {
-    "http": "127.0.0.1",
-    "https": "$(private_ip)"
-  },
+  "server": false,
   "ports": {
     "http": 8500,
     "https": 8533
@@ -33,19 +31,10 @@ sudo tee /etc/consul.d/config.json > /dev/null <<EOF
   "key_file": "/etc/ssl/certs/me.key",
   "cert_file": "/etc/ssl/certs/me.crt",
   "ca_file": "/usr/local/share/ca-certificates/01-me.crt",
-  "verify_server_hostname": true,
-  "verify_incoming": true,
-  "verify_outgoing": true,
-  "ui": true,
- "connect":{
-  "enabled": true,
-      "proxy": {
-              "allow_managed_root": true    }, 
-                 "proxy_defaults": {    
-                  "daemon_command": [ "/usr/local/bin/consul", "connect", "proxy", "-http-addr=127.0.0.1:8533" ]
-                  }
-                }
-                }
+  "verify_incoming": false,
+  "verify_outgoing": false,
+  "verify_server_hostname": false,
+}
 EOF
 
 echo "--> Writing profile"
@@ -54,19 +43,6 @@ alias conslu="consul"
 alias ocnsul="consul"
 EOF
 source /etc/profile.d/consul.sh
-
-echo "--> Creating training service"
-sudo tee /etc/consul.d/training.json > /dev/null <<"EOF"
-{
-  "service": {
-    "name": "training",
-    "port": 1991
-  }
-}
-EOF
-
-echo "--> Making consul.d world-writable..."
-sudo chmod 0777 /etc/consul.d/
 
 echo "--> Generating systemd configuration"
 sudo tee /etc/systemd/system/consul.service > /dev/null <<"EOF"
@@ -86,7 +62,7 @@ KillSignal=SIGINT
 WantedBy=multi-user.target
 EOF
 sudo systemctl enable consul
-sudo systemctl start consul
+sudo systemctl restart consul
 
 echo "--> Installing dnsmasq"
 ssh-apt install dnsmasq
@@ -99,8 +75,5 @@ cache-size=0
 EOF
 sudo systemctl enable dnsmasq
 sudo systemctl restart dnsmasq
-
-
-
 
 echo "==> Consul is done!"

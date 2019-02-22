@@ -23,12 +23,11 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"] # Canonical
 }
 
-resource "aws_vpc" "demostack" {
+resource "aws_vpc" "vaultstack" {
   cidr_block           = "${var.vpc_cidr_block}"
   enable_dns_hostnames = true
 
   tags {
-    Name           = "${var.namespace}"
     owner          = "${var.owner}"
     created-by     = "${var.created-by}"
     sleep-at-night = "${var.sleep-at-night}"
@@ -36,11 +35,11 @@ resource "aws_vpc" "demostack" {
   }
 }
 
-resource "aws_internet_gateway" "demostack" {
-  vpc_id = "${aws_vpc.demostack.id}"
+resource "aws_internet_gateway" "vaultstack" {
+  vpc_id = "${aws_vpc.vaultstack.id}"
 
   tags {
-    Name           = "${var.namespace}"
+
     owner          = "${var.owner}"
     created-by     = "${var.created-by}"
     sleep-at-night = "${var.sleep-at-night}"
@@ -49,22 +48,22 @@ resource "aws_internet_gateway" "demostack" {
 }
 
 resource "aws_route" "internet_access" {
-  route_table_id         = "${aws_vpc.demostack.main_route_table_id}"
+  route_table_id         = "${aws_vpc.vaultstack.main_route_table_id}"
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = "${aws_internet_gateway.demostack.id}"
+  gateway_id             = "${aws_internet_gateway.vaultstack.id}"
 }
 
 data "aws_availability_zones" "available" {}
 
-resource "aws_subnet" "demostack" {
+resource "aws_subnet" "vaultstack" {
   count                   = "${length(var.cidr_blocks)}"
-  vpc_id                  = "${aws_vpc.demostack.id}"
+  vpc_id                  = "${aws_vpc.vaultstack.id}"
   availability_zone       = "${data.aws_availability_zones.available.names[count.index]}"
   cidr_block              = "${var.cidr_blocks[count.index]}"
   map_public_ip_on_launch = true
 
   tags {
-    Name           = "${var.namespace}"
+
     owner          = "${var.owner}"
     created-by     = "${var.created-by}"
     sleep-at-night = "${var.sleep-at-night}"
@@ -72,9 +71,9 @@ resource "aws_subnet" "demostack" {
   }
 }
 
-resource "aws_security_group" "demostack" {
+resource "aws_security_group" "vaultstack" {
   name_prefix = "${var.namespace}"
-  vpc_id      = "${aws_vpc.demostack.id}"
+  vpc_id      = "${aws_vpc.vaultstack.id}"
 
   ingress {
     from_port   = 0
@@ -91,7 +90,7 @@ resource "aws_security_group" "demostack" {
   }
 }
 
-resource "aws_key_pair" "demostack" {
+resource "aws_key_pair" "vaultstack" {
   key_name   = "${var.namespace}"
   public_key = "${var.public_key}"
 }
@@ -112,12 +111,12 @@ resource "aws_iam_instance_profile" "consul-join" {
   role = "${aws_iam_role.consul-join.name}"
 }
 
-resource "aws_kms_key" "demostackVaultKeys" {
+resource "aws_kms_key" "vaultstackVaultKeys" {
   description             = "KMS for the Consul Demo Vault"
   deletion_window_in_days = 10
 
   tags {
-    Name           = "${var.namespace}"
+
     owner          = "${var.owner}"
     created-by     = "${var.created-by}"
     sleep-at-night = "${var.sleep-at-night}"
@@ -144,7 +143,7 @@ data "aws_iam_policy_document" "vault-server" {
       "kms:DescribeKey",
     ]
 
-    resources = ["${aws_kms_key.demostackVaultKeys.arn}"]
+    resources = ["${aws_kms_key.vaultstackVaultKeys.arn}"]
   }
 
   statement {

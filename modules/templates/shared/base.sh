@@ -67,13 +67,6 @@ ssh-apt install \
   tree \
   &>/dev/null
 
-echo "--> Installing git secrets"
-git clone https://github.com/awslabs/git-secrets
-cd git-secrets
-sudo make install
-cd -
-rm -rf git-secrets
-
 echo "--> Disabling checkpoint"
 sudo tee /etc/profile.d/checkpoint.sh > /dev/null <<"EOF"
 export CHECKPOINT_DISABLE=1
